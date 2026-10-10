@@ -1,0 +1,34 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: quh4gko8 <88831734+quh4gko8@users.noreply.github.com>
+Date: Tue, 14 Apr 2026 14:46:24 +0000
+Subject: [PATCH] Add preference key for permission category types for site
+ settings UI
+
+---
+ .../android/java/res/xml/site_settings_preferences.xml      | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/components/browser_ui/site_settings/android/java/res/xml/site_settings_preferences.xml b/components/browser_ui/site_settings/android/java/res/xml/site_settings_preferences.xml
+index 6845886a15849..996d9ca007ec7 100644
+--- a/components/browser_ui/site_settings/android/java/res/xml/site_settings_preferences.xml
++++ b/components/browser_ui/site_settings/android/java/res/xml/site_settings_preferences.xml
+@@ -20,7 +20,8 @@ The order of the following items is from: http://crbug.com/610358.
+ 
+     <!-- PERMISSIONS section -->
+     <org.chromium.components.browser_ui.settings.ChromeBasePreferenceCategory
+-        android:title="@string/site_settings_permission_category"/>
++        android:title="@string/site_settings_permission_category"
++        android:key="permission_category" />
+     <!-- Location -->
+     <org.chromium.components.browser_ui.settings.ChromeBasePreference
+         android:fragment="org.chromium.components.browser_ui.site_settings.SingleCategorySettings"
+@@ -111,7 +112,8 @@ The order of the following items is from: http://crbug.com/610358.
+ 
+     <!-- CONTENT SETTINGS section -->
+     <org.chromium.components.browser_ui.settings.ChromeBasePreferenceCategory
+-        android:title="@string/site_settings_content_category"/>
++        android:title="@string/site_settings_content_category"
++        android:key="content_category" />
+     <!-- Third party cookies -->
+     <org.chromium.components.browser_ui.settings.ChromeBasePreference
+         android:key="third_party_cookies"
