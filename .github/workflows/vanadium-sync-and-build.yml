@@ -44,7 +44,7 @@ jobs:
             echo "Güncelleme yok, derleme atlanıyor."
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
-
+          
   build:
     needs: sync
     # Sadece yeni commit varsa veya elle tetiklendiyse çalışır
