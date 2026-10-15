@@ -25,25 +25,28 @@ jobs:
       - name: Sync upstream changes
         id: sync_step
         run: |
-          git config user.name "GitHub Actions Bot"[cite: 2]
-          git config user.email "actions@github.com"[cite: 2]
+          git config user.name "GitHub Actions Bot"
+          git config user.email "actions@github.com"
 
-          # Uzak depo zaten ekliyse hata vermesini önlemek için || true eklenmiştir
-          git remote add upstream https://github.com/GrapheneOS/Vanadium.git || git remote set-url upstream https://github.com/GrapheneOS/Vanadium.git
-          git fetch upstream[cite: 2]
+          # Hatalı/Bozuk upstream kaydı varsa tamamen temizle (yoksa hatayı yoksay)
+          git remote remove upstream 2>/dev/null || true
+          
+          # Temiz bir şekilde HTTPS üzerinden uzak depoyu ekle ve verileri çek
+          git remote add upstream https://github.com/GrapheneOS/Vanadium.git
+          git fetch upstream
           
           # Güncelleme olup olmadığını kontrol et
-          LOCAL=$(git rev-parse HEAD)[cite: 2]
-          UPSTREAM=$(git rev-parse upstream/main)[cite: 2]
+          LOCAL=$(git rev-parse HEAD)
+          UPSTREAM=$(git rev-parse upstream/main)
           
-          if [ "$LOCAL" != "$UPSTREAM" ]; then[cite: 2]
-            git merge upstream/main --no-edit[cite: 2]
-            git push origin main[cite: 2]
-            echo "changed=true" >> $GITHUB_OUTPUT[cite: 2]
-          else[cite: 2]
-            echo "Güncelleme yok, derleme atlanıyor."[cite: 2]
-            echo "changed=false" >> $GITHUB_OUTPUT[cite: 2]
-          fi[cite: 2]
+          if [ "$LOCAL" != "$UPSTREAM" ]; then
+            git merge upstream/main --no-edit
+            git push origin main
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "Güncelleme yok, derleme atlanıyor."
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
           
   build:
     needs: sync
