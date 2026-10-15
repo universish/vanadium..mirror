@@ -22,34 +22,28 @@ jobs:
           ref: main 
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync Chromium Source (This will take hours)
+      - name: Sync upstream changes
+        id: sync_step
         run: |
-          # Üst dizinde bulunan ve fetch komutunu engelleyen gclient dosyasını temizle
-          rm -f .gclient
-          
-          mkdir -p chromium_src && cd chromium_src
-          fetch --nohooks android
-          gclient sync --with_branch_heads --with_tags
-          
-          git config user.name "GitHub Actions Bot"
-          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions Bot"[cite: 2]
+          git config user.email "actions@github.com"[cite: 2]
 
           # Uzak depo zaten ekliyse hata vermesini önlemek için || true eklenmiştir
           git remote add upstream https://github.com/GrapheneOS/Vanadium.git || git remote set-url upstream https://github.com/GrapheneOS/Vanadium.git
-          git fetch upstream
+          git fetch upstream[cite: 2]
           
           # Güncelleme olup olmadığını kontrol et
-          LOCAL=$(git rev-parse HEAD)
-          UPSTREAM=$(git rev-parse upstream/main)
+          LOCAL=$(git rev-parse HEAD)[cite: 2]
+          UPSTREAM=$(git rev-parse upstream/main)[cite: 2]
           
-          if [ "$LOCAL" != "$UPSTREAM" ]; then
-            git merge upstream/main --no-edit
-            git push origin main
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "Güncelleme yok, derleme atlanıyor."
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
+          if [ "$LOCAL" != "$UPSTREAM" ]; then[cite: 2]
+            git merge upstream/main --no-edit[cite: 2]
+            git push origin main[cite: 2]
+            echo "changed=true" >> $GITHUB_OUTPUT[cite: 2]
+          else[cite: 2]
+            echo "Güncelleme yok, derleme atlanıyor."[cite: 2]
+            echo "changed=false" >> $GITHUB_OUTPUT[cite: 2]
+          fi[cite: 2]
           
   build:
     needs: sync
@@ -84,11 +78,12 @@ jobs:
 
       - name: Sync Chromium Source (This will take hours)
         run: |
-          mkdir -p chromium_src && cd chromium_src
-          fetch --nohooks android
-          # Vanadium'un gerektirdiği Chromium sürümüne senkronize edilir
-          # Not: Gerçek derlemede Vanadium'un manifest dosyasındaki belirli Chromium tag'i okunmalıdır.
-          gclient sync --with_branch_heads --with_tags
+          # Üst dizinde bulunan ve fetch komutunu engelleyen gclient dosyasını temizle
+          rm -f .gclient
+          
+          mkdir -p chromium_src && cd chromium_src[cite: 2]
+          fetch --nohooks android[cite: 2]
+          gclient sync --with_branch_heads --with_tags[cite: 2]
 
       - name: Apply Vanadium Patches
         run: |
