@@ -22,9 +22,15 @@ jobs:
           ref: main 
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Sync upstream changes
-        id: sync_step
+      - name: Sync Chromium Source (This will take hours)
         run: |
+          # Üst dizinde bulunan ve fetch komutunu engelleyen gclient dosyasını temizle
+          rm -f .gclient
+          
+          mkdir -p chromium_src && cd chromium_src
+          fetch --nohooks android
+          gclient sync --with_branch_heads --with_tags
+          
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
