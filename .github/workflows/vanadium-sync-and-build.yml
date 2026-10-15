@@ -84,10 +84,10 @@ jobs:
           # Üst dizinde bulunan ve fetch komutunu engelleyen gclient dosyasını temizle
           rm -f .gclient
           
-          mkdir -p chromium_src && cd chromium_src[cite: 2]
-          fetch --nohooks android[cite: 2]
-          gclient sync --with_branch_heads --with_tags[cite: 2]
-
+          mkdir -p chromium_src && cd chromium_src
+          fetch --nohooks android
+          gclient sync --with_branch_heads --with_tags
+          
       - name: Apply Vanadium Patches
         run: |
           # GrapheneOS yama komut dosyaları burada çalıştırılır
