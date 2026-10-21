@@ -10,17 +10,47 @@ permissions:
   contents: write
 
 jobs:
-  sync:
+  build-chromium:
     runs-on: ubuntu-latest
-    outputs:
-      has_new_commits: ${{ steps.sync_step.outputs.changed }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      # 1. Aşama: Sunucudaki gereksiz dosyaları silerek maksimum disk alanı yaratır (Çok Kritik!)
+      - name: Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
         with:
-          fetch-depth: 0
-          ref: main 
-          token: ${{ secrets.GITHUB_TOKEN }}
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+
+      # 2. Aşama: Kodu indirirken çıktıların tamponlanmasını (buffer) engeller ve timeout'u önler
+      - name: Fetch Chromium (with Keep-Alive)
+        env:
+          PYTHONUNBUFFERED: 1
+        run: |
+          # 1. Arka planda her 8 dakikada (480 saniye) bir log yazdıran döngüyü başlat
+          while true; do
+            echo "[Keep-Alive] İşlem devam ediyor, donma yok... $(date)"
+            sleep 480
+          done &
+          
+          # Arka plandaki döngünün işlem kimliğini (PID) kaydet
+          KEEP_ALIVE_PID=$!
+          
+          # 2. Asıl ağır işleminizi çalıştırın (fetch veya gclient vb.)
+          fetch --nohooks --no-history chromium
+          
+          # 3. Asıl işlem bittiğinde arka plandaki log yazdırma döngüsünü sonlandır
+          kill $KEEP_ALIVE_PID
+          
+      # 3. Aşama: Gclient senkronizasyonu
+      - name: Sync dependencies
+        env:
+          PYTHONUNBUFFERED: 1
+        run: |
+          gclient sync --nohooks --no-history --verbose
 
       - name: Sync upstream changes
         id: sync_step
