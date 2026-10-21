@@ -4,53 +4,22 @@ on:
   schedule:
     # GrapheneOS saatine göre (ET) öğle arası (~16:00 UTC) ve mesai bitimi (~21:00 UTC)
     - cron: '0 16,21 * * *'
-  workflow_dispatch: # Manuel tetikleme[cite: 1]
+  workflow_dispatch: # Manuel tetikleme
 
 permissions:
   contents: write
 
 jobs:
-  build-chromium:
+  sync:
     runs-on: ubuntu-latest
+    outputs:
+      has_new_commits: ${{ steps.sync_step.outputs.changed }}
     steps:
-      # 1. Aşama: Sunucudaki gereksiz dosyaları silerek maksimum disk alanı yaratır (Çok Kritik!)
-      - name: Free Disk Space (Ubuntu)
-        uses: jlumbroso/free-disk-space@main
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          tool-cache: true
-          android: true
-          dotnet: true
-          haskell: true
-          large-packages: true
-          docker-images: true
-          swap-storage: true
-
-      # 2. Aşama: Kodu indirirken çıktıların tamponlanmasını (buffer) engeller ve timeout'u önler
-      - name: Fetch Chromium (with Keep-Alive)
-        env:
-          PYTHONUNBUFFERED: 1
-        run: |
-          # 1. Arka planda her 8 dakikada (480 saniye) bir log yazdıran döngüyü başlat
-          while true; do
-            echo "[Keep-Alive] İşlem devam ediyor, donma yok... $(date)"
-            sleep 480
-          done &
-          
-          # Arka plandaki döngünün işlem kimliğini (PID) kaydet
-          KEEP_ALIVE_PID=$!
-          
-          # 2. Asıl ağır işleminizi çalıştırın (fetch veya gclient vb.)
-          fetch --nohooks --no-history chromium
-          
-          # 3. Asıl işlem bittiğinde arka plandaki log yazdırma döngüsünü sonlandır
-          kill $KEEP_ALIVE_PID
-          
-      # 3. Aşama: Gclient senkronizasyonu
-      - name: Sync dependencies
-        env:
-          PYTHONUNBUFFERED: 1
-        run: |
-          gclient sync --nohooks --no-history --verbose
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Sync upstream changes
         id: sync_step
@@ -58,31 +27,31 @@ jobs:
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
 
-          # Hatalı/Bozuk upstream kaydı varsa tamamen temizle (yoksa hatayı yoksay)
+          # Bozuk upstream kaydı varsa temizle
           git remote remove upstream 2>/dev/null || true
           
-          # Temiz bir şekilde HTTPS üzerinden uzak depoyu ekle ve verileri çek
+          # Upstream olarak GrapheneOS/Vanadium ekle ve çek
           git remote add upstream https://github.com/GrapheneOS/Vanadium.git
           git fetch upstream
           
-          # Güncelleme olup olmadığını kontrol et
           LOCAL=$(git rev-parse HEAD)
           UPSTREAM=$(git rev-parse upstream/main)
           
           if [ "$LOCAL" != "$UPSTREAM" ]; then
             git merge upstream/main --no-edit
             git push origin main
-            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "changed=true" >> "$GITHUB_OUTPUT"
           else
             echo "Güncelleme yok, derleme atlanıyor."
-            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "changed=false" >> "$GITHUB_OUTPUT"
           fi
-          
+
   build:
     needs: sync
-    # Sadece yeni commit varsa veya elle tetiklendiyse çalışır
+    # Sadece yeni commit varsa veya manuel tetiklendiyse çalışır
     if: needs.sync.outputs.has_new_commits == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     steps:
       - name: Maximize Build Space
         uses: easimon/maximize-build-space@master
@@ -109,27 +78,24 @@ jobs:
           git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
           echo "$PWD/depot_tools" >> $GITHUB_PATH
 
-      - name: Sync Chromium Source (This will take hours)
+      - name: Sync Chromium Source
         run: |
-          # Üst dizinde bulunan ve fetch komutunu engelleyen gclient dosyasını temizle
+          export PATH="$PWD/depot_tools:$PATH"
           rm -f .gclient
-          
           mkdir -p chromium_src && cd chromium_src
           fetch --nohooks android
           gclient sync --with_branch_heads --with_tags
-          
+
       - name: Apply Vanadium Patches
         run: |
-          # GrapheneOS yama komut dosyaları burada çalıştırılır
-          # Vanadium klasöründeki patch'leri Chromium kaynak koduna uygula
           cp -r patches/ chromium_src/src/
           cd chromium_src/src
-          for p in ../patches/*.patch; do patch -p1 < $p; done
+          for p in ../patches/*.patch; do patch -p1 < "$p"; done
 
       - name: Build Vanadium Browser and WebView
         run: |
+          export PATH="$PWD/depot_tools:$PATH"
           cd chromium_src/src
-          # Chromium GN argümanları Vanadium spesifikasyonlarına göre ayarlanır
           gn gen out/Default --args='target_os="android" target_cpu="arm64" is_debug=false is_official_build=true proprietary_codecs=true ffmpeg_branding="Chrome"'
           autoninja -C out/Default trichrome_chrome_apk trichrome_webview_apk
 
@@ -141,7 +107,7 @@ jobs:
 
       - name: Generate Release Tag
         id: tag
-        run: echo "tag_name=v$(date +'%Y.%m.%d-%H%M')" >> $GITHUB_OUTPUT
+        run: echo "tag_name=v$(date +'%Y.%m.%d-%H%M')" >> "$GITHUB_OUTPUT"
 
       - name: Publish Release
         uses: softprops/action-gh-release@v2
